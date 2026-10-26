@@ -32,7 +32,7 @@ try {
   step("workspace created implicitly by first tab", tab.tabId > 0 && tab.active === false, `tab ${tab.tabId}`);
 
   const txt = (await call("get_page_text", { tabId: tab.tabId })).json;
-  step("page text read", (txt.text || "").includes("Example Domain"));
+  step("page text read", txt.title === "Example Domain" && (txt.text || "").includes("Learn more"));
 
   const shot = await call("screenshot", { tabId: tab.tabId });
   step("background screenshot captured", !!shot.img && shot.img.data.length > 3000, `${Math.round(shot.img.data.length * 3 / 4 / 1024)}KB jpeg`);
