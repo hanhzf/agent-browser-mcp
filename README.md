@@ -29,7 +29,7 @@ Cowork thread B ──stdio MCP──▶ server (RELAY ─▶ hub)              
 ## Verification and architecture
 
 - [FEB Profile verification](docs/feb-profile-verification-2026-10-26.md)
-- [Linux.do workflow architecture](docs/agent-browser-mcp-linux-do-architecture.md)
+- [Browser automation framework architecture](docs/agent-browser-mcp-linux-do-architecture.md)
 - [Interactive architecture](docs/agent-browser-mcp-linux-do.html)
 
 ## Install
