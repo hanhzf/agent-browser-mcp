@@ -2,23 +2,22 @@
 
 ![Agent Browser MCP 与 Linux.do 自动化架构](agent-browser-mcp-linux-do.svg)
 
-这张图描述 FEB Chrome Profile 上已经验证的浏览器桥接链路，以及现有 Linux.do 调度器迁移到 MCP 时的边界。实线是当前 Agent Browser MCP 已实现并通过真实 Profile 测试的调用链；虚线是保留业务策略、后续替换驱动接口的迁移部分。
+这张图只描述最终运行状态。WebSocket Hub 是 Node.js MCP Server 的内部模块，不作为独立服务部署。
 
 ## 端到端流程
 
-1. Linux.do 调度与站点适配器按照现有规则决定何时运行、选择哪些话题，以及何时查询 Connect 指标。
-2. 迁移后，适配器向 Agent Browser MCP 发出工具调用，并在同一任务中持续使用固定 `threadTitle`。
-3. MCP 服务维护该线程的当前标签页和已选择 Profile，通过本机 WebSocket Hub 将命令路由到固定的 FEB `deviceId`。
-4. FEB Profile 中的 Chrome Agent Bridge 扩展把 `threadTitle` 解析为唯一任务标签组，只允许命令访问该组的标签页。
-5. 扩展通过 Chrome API、CDP 和页面脚本在后台读取、截图、滚动或交互；任务标签页保持 `active=false`。
-6. 页面结果返回调度器；调度器继续负责事件日志、指标缓存、随机批次和运行时间窗。
+1. Python `reader.py` 按时间窗和随机规则选择话题，并发出 MCP 工具调用。
+2. Node.js Agent Browser MCP Server 维护线程和 Profile 状态；内置 WebSocket Hub 把命令发送给 FEB 扩展实例。
+3. Chrome Agent Bridge 把 `threadTitle` 映射为唯一任务标签组，只允许命令访问该组标签页。
+4. 扩展在后台完成页面读取、截图、滚动或交互，并将结果原路返回给 `reader.py`。
+5. `reader.py` 保存事件日志和指标缓存，并继续下一次调度。
 
 ## 边界
 
 | 边界 | 负责内容 | 不负责内容 |
 | --- | --- | --- |
-| Linux.do 调度与适配器 | 时间窗、候选话题、随机节奏、账号与站点规则、日志、低频指标查询 | Chrome Profile 选择、标签隔离、页面动作实现 |
-| Agent Browser MCP | MCP 工具协议、线程会话状态、显式 Profile 选择、Hub/Relay 路由 | 具体网站的访问策略与业务判断 |
+| Python `reader.py` | 时间窗、候选话题、随机节奏、账号与站点规则、日志、低频指标查询 | Chrome Profile 选择、标签隔离、页面动作实现 |
+| Node.js MCP Server | MCP 工具协议、线程会话状态、显式 Profile 选择、内置 WebSocket Hub | 具体网站的访问策略与业务判断 |
 | Chrome Agent Bridge | Profile 身份、任务标签组、Chrome API/CDP 动作、重连与标签组恢复 | 调度计划和 Linux.do 业务规则 |
 | 任务专属标签组 | 当前任务可读写的页面集合 | 用户标签页、其他任务的标签组 |
 
@@ -29,10 +28,15 @@
 - **用户标签边界**：不属于任务组的标签页不会出现在任务可见列表中，也不能作为动作目标。
 - **恢复边界**：扩展重连或 Chrome 重启后，标签组注册表按任务身份重新绑定；关闭标签组时先解除分组再关闭标签，避免留下同步的保存组。
 
-## 当前状态
+## 语言与部署结论
 
-2026-10-26 的真实 FEB Profile 验证已经覆盖 Profile 选择、linux.do 登录态、后台读取、滚动、截图、线程隔离、扩展重连、冻结页面恢复、任务清理和不抢占前台。完整结果见 [FEB Profile 前后端联调记录](feb-profile-verification-2026-10-26.md)。
+- Chrome Agent Bridge 保持 JavaScript，因为它直接使用 Chrome 扩展 API。
+- Agent Browser MCP Server 继续使用现成的 Node.js 实现；WebSocket Hub 已包含在其中。
+- Linux.do 业务调度保持 Python；只需把浏览器驱动调用收敛到 MCP 接口。
+- Rust 可以重写整个本机后端，但需要同时重写成熟的 MCP Server 和 Python 调度逻辑，目前没有性能或部署收益支撑这项成本。
 
-现有 `Linux do 自动刷帖子/reader.py` 仍使用 Agent Browser CLI/CDP。本图把它到 MCP 的连接标为待迁移，因此不能据此认为旧后台进程已经切换，也不能把页面访问等同于 Connect 指标已经入账。
+最终只需要维护三个本机组件：Python 调度器、Node.js MCP Server、Chrome 扩展。没有独立的 WebSocket Hub 部署项。
+
+这张图表示最终架构；当前验证进度见 [FEB Profile 前后端联调记录](feb-profile-verification-2026-10-26.md)。
 
 可交互版本：[agent-browser-mcp-linux-do.html](agent-browser-mcp-linux-do.html)。该版本可以查看节点来源、追踪主路径、切换主题并重新导出 SVG。
