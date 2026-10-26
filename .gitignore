@@ -4,3 +4,4 @@ test/browsers/
 *.log
 coverage/
 .worktrees/
+.archify/

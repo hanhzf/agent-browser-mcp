@@ -26,6 +26,12 @@ Cowork thread B ──stdio MCP──▶ server (RELAY ─▶ hub)              
 - **`skills/chrome-agent/`** — the agent-facing skill: the `threadTitle`
   contract, cleaning up with `delete_my_tabs`, background etiquette.
 
+## Verification and architecture
+
+- [FEB Profile verification](docs/feb-profile-verification-2026-10-26.md)
+- [Linux.do workflow architecture](docs/agent-browser-mcp-linux-do-architecture.md)
+- [Interactive architecture](docs/agent-browser-mcp-linux-do.html)
+
 ## Install
 
 ```bash
